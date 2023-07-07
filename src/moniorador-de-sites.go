@@ -4,17 +4,19 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const monitoramentos = 5
-const delay = 1 
+const delay = 0 
 
 func main() {
-
+	
 	exibeIntroducao()
 	for {
 		exibirMenu()
@@ -24,7 +26,7 @@ func main() {
 			iniciarMonitoramento(leSitesDoArquivo())
 		case 2:
 			fmt.Println("Exibindo Logs...")
-			
+			imprimeLogs()
 		case 0:
 			fmt.Println("Saindo do programa")
 			os.Exit(0) // libera espaço na memória???
@@ -82,10 +84,10 @@ func testaSite(site string) {
 
 	if resp.StatusCode == 200 {
 		fmt.Println("Site:", site, "Carregado com Sucesso! Status Code:", resp.StatusCode)
-	} else if resp.StatusCode == 404 {
-		fmt.Println("Site:", site, "não encontrado ou fora do ar")
+		registraLog(site, true)
 	} else {
 		fmt.Println("Site:", site, "está com problemas. Status Code:", resp.StatusCode)
+		registraLog(site, false)
 	} 
 
 }
@@ -95,7 +97,7 @@ func leSitesDoArquivo() []string {
 
 	arquivo, _ := os.Open("sites-monitorados.txt")
 	leitor := bufio.NewReader(arquivo)
-
+	
 	for {
 		linha, err := leitor.ReadString('\n')
 		linha = strings.TrimSpace(linha)
@@ -110,3 +112,25 @@ func leSitesDoArquivo() []string {
 	return sites
 }	
 
+func registraLog(site string, status bool) {
+
+	arquivo, err := os.OpenFile("log.txt", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	arquivo.WriteString(time.Now().Format("02/01/2006 - 15:04:05 | "))
+	arquivo.WriteString("URL: " + site + "Status: " + strconv.FormatBool(status) + "\n")
+	arquivo.Close()
+}
+
+func imprimeLogs() {
+	arquivo, err := ioutil.ReadFile("log.txt")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(arquivo))
+
+}
